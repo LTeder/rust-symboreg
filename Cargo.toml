@@ -1,0 +1,11 @@
+[package]
+name = "basicsymbolicregression"
+version = "0.1.0"
+authors = ["Logan Teder <l.teder@columbia.edu>"]
+
+[dependencies]
+indicatif = "0.17.1"
+rand = "0.5.2"
+
+[profile.dev]
+opt-level = 2
