@@ -3,12 +3,12 @@ extern crate rand;
 use rand::{thread_rng, Rng};
 
 pub mod examples; 
-pub mod city;
+pub mod dataset;
 pub mod helper;
 mod individual;
 mod simulation;
 
-pub use city::City;
+pub use dataset::Point;
 pub use individual::Individual;
 pub use simulation::Simulation;
 
@@ -27,7 +27,6 @@ pub fn select_parents<'a>(w: &[f64], individuals: &'a [Individual]) -> (&'a Indi
 // max_by_key: Ord not implemented for f64
 // population.iter().max_by_key(|i| i.fitness).unwrap().clone()
 pub fn find_fittest(population: &[Individual]) -> Individual {
-
     let mut best_individual = &population[0];
     
     for individual in population {
@@ -39,7 +38,6 @@ pub fn find_fittest(population: &[Individual]) -> Individual {
 }
 
 pub fn get_cumulative_weights(individuals: &[Individual]) -> Vec<f64> {
-
     let mut running_sum = 0.0;
     let mut cumulative_weights = vec![running_sum];
 
@@ -50,21 +48,19 @@ pub fn get_cumulative_weights(individuals: &[Individual]) -> Vec<f64> {
     cumulative_weights
 }
 
-pub fn random_population(population_size: usize, cities: &[City]) -> Vec<Individual> {
-
-    let number_of_cities = cities.len();
+pub fn random_population(population_size: usize, points: &[Point]) -> Vec<Individual> {
+    let number_of_points = points.len();
     let mut individuals:Vec<Individual> = Vec::new();
     
     for _ in 0..population_size {
-        let dna = random_dna(number_of_cities);
-        let indiv = Individual::new(dna, &cities);
+        let dna = random_dna(number_of_points);
+        let indiv = Individual::new(dna, &points);
         individuals.push(indiv);
     } 
     individuals
 }
 
 /*
-
 -----------------------------
 ALTERNATIVE SELECT INDEX FUNCTION
 -----------------------------
@@ -76,5 +72,4 @@ fn select_index(weights: &[f64]) -> usize {
     while weights[i] > r { i -= 1 }
     i
 }
-
 */

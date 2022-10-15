@@ -1,5 +1,5 @@
 [package]
-name = "basicsymbolicregression"
+name = "symboreg"
 version = "0.1.0"
 authors = ["Logan Teder <l.teder@columbia.edu>"]
 

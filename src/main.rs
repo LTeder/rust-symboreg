@@ -1,16 +1,11 @@
-extern crate citydna;
-use citydna::city;
-// use citydna::examples;
-use citydna::{City, Simulation};
-use citydna::helper;
+extern crate symboreg;
+use symboreg::dataset;
+use symboreg::{Point, Simulation};
+use symboreg::helper;
 use std::process;
 use std::env;
 
 fn main() {
-
-    // examples::example_one();
-    // examples::example_two();
-
     // ----------------------
     // PARSE ARGUMENTS
     // ----------------------
@@ -32,7 +27,6 @@ fn main() {
             }
         );
 
-
     // ----------------------
     // EXTRACT SPECS AND DATA
     // ----------------------
@@ -48,20 +42,18 @@ fn main() {
          });
 
     let contents = helper::read_file(&city_filename);
-    let cities: Vec<City> = city::string_to_cities(&contents);
+    let points: Vec<Point> = dataset::string_to_points(&contents);
     
-
     // ----------------------
     // RUN SIMULATION
     // ----------------------
-
     let mut sim = Simulation::new(
         iterations,
         crossover_probability, 
         mutation_probability, 
         population_size,
-        cities
+        points
     );
-
+    
     sim.run(debug_level, skip);
 }

@@ -5,15 +5,14 @@ use super::*;
 use helper::print_vec;
 
 pub struct Simulation {
-
     iterations: usize,
 
     crossover_probability: f64,
     mutation_probability: f64,
     population_size: usize, 
 
-    number_of_cities: usize,
-    cities: Vec<City>,
+    number_of_points: usize,
+    points: Vec<Point>,
 
     number_of_mutations: usize,
     number_of_crossovers: usize,
@@ -23,16 +22,15 @@ pub struct Simulation {
 }
 
 impl Simulation {
-
     pub fn new(iterations: usize,
                crossover_probability: f64,
                mutation_probability: f64,
                population_size: usize,
-               cities: Vec<City>) -> Self {
+               points: Vec<Point>) -> Self {
 
         assert_eq!(population_size % 10, 0, "population_size:{} should be divisible by 10", population_size);
 
-        let number_of_cities = cities.len();
+        let number_of_points = points.len();
         let number_of_mutations = 0;
         let number_of_crossovers = 0;
         let fitness = 0.0;
@@ -43,8 +41,8 @@ impl Simulation {
             crossover_probability, 
             mutation_probability, 
             population_size, 
-            number_of_cities, 
-            cities, 
+            number_of_points, 
+            points, 
             number_of_mutations,
             number_of_crossovers,
             fitness,
@@ -55,7 +53,7 @@ impl Simulation {
     fn generate_children(&mut self, mom: &Individual, dad: &Individual) -> (Individual, Individual) {
         if thread_rng().gen_bool(self.crossover_probability) {
             self.number_of_crossovers += 2;
-            mom.cross_over(dad, &self.cities)
+            mom.cross_over(dad, &self.points)
         } else {
             (mom.clone(), dad.clone())
         }
@@ -63,7 +61,7 @@ impl Simulation {
 
     fn might_mutate_child(&mut self, child: &mut Individual) {
         if thread_rng().gen_bool(self.mutation_probability) {
-            child.mutate(&self.cities);
+            child.mutate(&self.points);
             self.number_of_mutations += 1;
         }
     }
@@ -90,14 +88,13 @@ impl Simulation {
     pub fn run(&mut self, debug_level: usize, skip: usize) {
         assert!(skip > 0, "skip must be 1 or larger");
 
-        let mut population = random_population(self.population_size, &self.cities);
+        let mut population = random_population(self.population_size, &self.points);
         let mut champion = find_fittest(&population);
 
         for i in (0..self.iterations).progress() {
-
             population = self.generate_population(population);
             let challenger = find_fittest(&population);
-            debug_print(debug_level, skip, i + 1, &population, &champion, &challenger, self.number_of_cities);
+            debug_print(debug_level, skip, i + 1, &population, &champion, &challenger, self.number_of_points);
 
             if champion.fitness <= challenger.fitness {
                 champion = challenger;
@@ -111,7 +108,6 @@ impl Simulation {
     }
 
     pub fn print(&self) {
-
         let x = self.population_size * self.iterations;
 
         println!("\n --------------- \n STATS \n --------------- \n");
@@ -125,12 +121,11 @@ impl Simulation {
         println!("crossover_probability: {:?}", self.crossover_probability);
         println!("mutation_probability: {:?}", self.mutation_probability);
         println!("population_size: {:?}", self.population_size);
-        println!("number_of_cities: {:?}", self.number_of_cities);
-        println!("\n Cities: ");
-        print_vec(&self.cities);
+        println!("number_of_points: {:?}", self.number_of_points);
+        println!("\n points: ");
+        print_vec(&self.points);
 
         println!("\n --------------- \n END \n --------------- \n");
-
     }
 }
 
@@ -141,7 +136,6 @@ fn debug_print(debug_level: usize,
                champion: &Individual, 
                challenger: &Individual, 
                n: usize) {
-
     if debug_level == 1 && (i % skip == 0) {
         print!("{}, {}, {}, {},", i, n, champion.fitness, challenger.fitness);
 
