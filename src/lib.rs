@@ -1,7 +1,3 @@
-extern crate rand;
-
-use rand::{thread_rng, Rng};
-
 pub mod examples; 
 pub mod dataset;
 pub mod helper;
@@ -11,12 +7,6 @@ mod simulation;
 pub use dataset::Point;
 pub use individual::Individual;
 pub use simulation::Simulation;
-
-pub fn random_dna(n: usize) -> Vec<usize> {
-    let mut v:Vec<usize> = (0..n).collect();
-    thread_rng().shuffle(&mut v);
-    v
-}
 
 pub fn select_parents<'a>(w: &[f64], individuals: &'a [Individual]) -> (&'a Individual, &'a Individual) {
     let mom_index = helper::select_index(w);
@@ -53,23 +43,9 @@ pub fn random_population(population_size: usize, points: &[Point]) -> Vec<Indivi
     let mut individuals:Vec<Individual> = Vec::new();
     
     for _ in 0..population_size {
-        let dna = random_dna(number_of_points);
-        let indiv = Individual::new(dna, &points);
+        let indiv = Individual::new(points);
+        indiv.spawn(2);
         individuals.push(indiv);
     } 
     individuals
 }
-
-/*
------------------------------
-ALTERNATIVE SELECT INDEX FUNCTION
------------------------------
-
-fn select_index(weights: &[f64]) -> usize {
-    let w_sum = weights.last().unwrap();
-    let mut i = weights.len() - 2;
-    let r: f64 = thread_rng().gen_range(0.0, *w_sum);
-    while weights[i] > r { i -= 1 }
-    i
-}
-*/

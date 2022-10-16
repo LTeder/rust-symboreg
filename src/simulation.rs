@@ -1,7 +1,9 @@
+extern crate rand;
 extern crate indicatif;
-use self::indicatif::ProgressIterator;
-use rand::{thread_rng, Rng};
+
 use super::*; 
+use self::rand::{thread_rng, Rng};
+use self::indicatif::ProgressIterator;
 use helper::print_vec;
 
 pub struct Simulation {

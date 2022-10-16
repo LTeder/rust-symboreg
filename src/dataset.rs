@@ -1,4 +1,6 @@
-use rand::{thread_rng, Rng};
+extern crate rand;
+
+use self::rand::{thread_rng, Rng};
 use std::str::FromStr;
 
 #[derive(Debug, Clone)]
@@ -9,7 +11,7 @@ pub struct Point {
 
 impl Point {
     pub fn new(x: f64, y: f64) -> Self {
-        Point { x, y }
+        Point {x, y}
     }
 
     pub fn distance_squared(&self, other: &Point) -> f64 {
@@ -24,7 +26,6 @@ pub fn string_to_points(contents: &String) -> Vec<Point> {
     let mut points: Vec<Point> = Vec::new();
 
     for line in contents.lines() {
-
         let values: Vec<f64> = line.split(',')
                                    .map(|val| f64::from_str(val.trim())
                                    .unwrap())
