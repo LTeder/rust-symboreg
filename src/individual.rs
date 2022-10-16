@@ -1,7 +1,9 @@
 extern crate rand;
 
 use super::Point;
+use std::fmt;
 use self::rand::{thread_rng, Rng};
+
 pub const MIN_POSITIVE: f64 = 2.2250738585072014e-308f64;
 
 #[derive(Debug, Clone)]
@@ -40,15 +42,31 @@ pub fn get_val() -> Option<Node<f32>> {
     Some(terminal_node)
 }
 
+pub fn length_from_depth(depth: u32) -> usize {
+    2_usize.pow(depth) - 1
+}
+
 #[derive(Debug, Clone)]
 pub struct SymbolicBinaryHeap<T> {
+    depth: u32,
     heap: Vec<Option<Node<T>>>
+}
+
+impl fmt::Display for SymbolicBinaryHeap<f32> {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let mut msg = String::new();
+        for i in 0..self.depth {
+            let data = &self.heap[length_from_depth(i)..length_from_depth(i + 1)];
+            msg.push_str(&format!("{data:?}\n").to_string())
+        }
+        write!(f, "{}", msg)
+    }
 }
 
 impl SymbolicBinaryHeap<f32> {
     pub fn new(depth: u32) -> Self {
-        let heap: Vec<Option<Node<f32>>> = vec![None; 2_usize.pow(depth) - 1];
-        SymbolicBinaryHeap {heap}
+        let heap: Vec<Option<Node<f32>>> = vec![None; length_from_depth(depth)];
+        SymbolicBinaryHeap {depth, heap}
     }
     
     pub fn left(&mut self, base_idx: usize) -> &mut Option<Node<f32>> {
@@ -59,40 +77,76 @@ impl SymbolicBinaryHeap<f32> {
         &mut self.heap[2 * base_idx + 2]
     }
     
-    pub fn add_pair(&mut self, idx: usize, left: Option<Node<f32>>, right: Option<Node<f32>>) {
+    fn add_to_node(&mut self, idx: usize, left: Option<Node<f32>>, right: Option<Node<f32>>) {
         *self.left(idx) = left;
-        *self.right(idx) = right;
+        if right.is_some() {
+            *self.right(idx) = right;
+        }
     }
     
-    pub fn add_single(&mut self, idx: usize, value: Option<Node<f32>>) {
-        *self.left(idx) = value;
+    fn fill_node(&mut self, idx: usize, getter: fn() -> Option<Node<f32>> ) {
+        match self.heap[idx] {
+            Some(Node::Add) | Some(Node::Subtract) |
+            Some(Node::Multiply) | Some(Node::Divide) =>
+                self.add_to_node(idx, getter(), getter()),
+            Some(Node::Sine) | Some(Node::Cosine) =>
+                self.add_to_node(idx, getter(), None),
+            _ => ()
+        };
     }
 
     pub fn random_instantiate(&mut self, base_idx: usize, depth: u32) {
         if depth > 1 {
             self.heap[base_idx] = get_op();
-            let mut nodes_in_layer = 1;
-            for layer in 1..(depth - 1) {
-                nodes_in_layer = 2_usize.pow(layer);
+            for layer in 0..(depth - 2) {
+                let nodes_in_layer = 2_usize.pow(layer);
                 for i in 0..nodes_in_layer {
-                    let idx = base_idx + 1 + i;
-                    println!("{} {:?}", idx, get_op());
-                    self.add_pair(idx, get_op(), get_op());
+                    let idx = base_idx + layer as usize + i;
+                    self.fill_node(idx, get_op);
                 }
             }
+            let nodes_in_layer = 2_usize.pow(depth - 2);
             for i in 0..nodes_in_layer {
                 let idx = base_idx + nodes_in_layer - 1 + i;
-                match self.heap[idx] {
-                    Some(Node::Add) | Some(Node::Subtract) | Some(Node::Multiply)
-                        | Some(Node::Divide) => self.add_pair(idx, get_val(), get_val()),
-                    Some(Node::Sine) | Some(Node::Cosine) => self.add_single(idx, get_val()),
-                    _ => ()
-                };
+                self.fill_node(idx, get_val)
             }
         } else {
             // To do: impl fn delete_from_idx
             self.heap[base_idx] = get_val();
         }
+    }
+    
+    fn _collapse(&mut self, idx: usize, variable: f32) -> f32{
+        let l = if self.left(idx).is_some() {
+            self._collapse(2 * idx + 1, variable)
+        } else {
+            0.0
+        };
+        let r = if self.right(idx).is_some() {
+            self._collapse(2 * idx + 2, variable)
+        } else {
+            0.0
+        };
+        match self.heap[idx] {
+            Some(Node::Add) => {l + r},
+            Some(Node::Subtract) => {l - r},
+            Some(Node::Multiply) => {l * r},
+            Some(Node::Divide) => {
+                if r == 0.0 {
+                    panic!("Attempted divide by zero.")
+                }
+                l / r
+            },
+            Some(Node::Sine) => l.sin(),
+            Some(Node::Cosine) => l.cos(),
+            Some(Node::Number(n)) => n,
+            Some(Node::Variable) => variable,
+            _ => 0.0
+        }
+    }
+    
+    pub fn collapse(&mut self, variable: f32) -> f32{
+        self._collapse(0, variable)
     }
 }
 
