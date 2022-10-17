@@ -1,12 +1,12 @@
-# Rusty Genes
+# rust-symboreg, "Rusty Genes"
 - A Rust implementation of a genetic program to perform symbolic regression
-- See [Mithi](https://github.com/mithi) Sevilla's [Medium article](https://medium.com/@mithi/genetic-algorithms-in-rust-for-autonomous-agents-an-introduction-ac182de32aee) for a detailed discussion of this repo's source, which addressed the Travelling Salesman Problem
+- See [Mithi](https://github.com/mithi) Sevilla's [Medium article](https://medium.com/@mithi/genetic-algorithms-in-rust-for-autonomous-agents-an-introduction-ac182de32aee) for a detailed discussion of the [repo](https://github.com/mithi/rusty-genes) from which this was initially forked, addressing the Travelling Salesman Problem
 
+# Usage
 ```bash
-$ curl https://sh.rustup.rs -sSf | sh
 $ cargo test -- --nocapture
 $ cargo build
-$ cargo run ./data/specs/specs0.csv ./data/datasets/cities0.csv > ./output0.csv
+$ cargo run ./data/specs/specs0.csv ./data/datasets/set0.csv > ./output0.csv
 ```
 
 # Simulation
