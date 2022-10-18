@@ -1,14 +1,42 @@
-pub mod examples; 
-pub mod dataset;
+use std::str::FromStr;
+
+pub mod examples;
 pub mod helper;
 mod individual;
 mod simulation;
 
-pub use dataset::Point;
 pub use individual::Individual;
 pub use simulation::Simulation;
 
-pub fn select_parents<'a>(w: &[f64], individuals: &'a [Individual]) -> (&'a Individual, &'a Individual) {
+#[derive(Debug, Clone)]
+pub struct Point {
+    pub x: f64,
+    pub y: f64,
+}
+
+impl Point {
+    pub fn new(x: f64, y: f64) -> Self {
+        Point {x, y}
+    }
+}
+
+pub fn string_to_points(contents: &String) -> Vec<Point> {
+    // To do: Error handling: Unwrapping of line + expected # elements 
+    let mut points: Vec<Point> = Vec::new();
+
+    for line in contents.lines() {
+        let values: Vec<f64> = line.split(',')
+                                   .map(|val| f64::from_str(val.trim())
+                                   .unwrap())
+                                   .collect();
+        
+        let c = Point::new(values[1], values[2]);
+        points.push(c);
+    }
+    points
+}
+
+pub fn select_parents<'a>(w: &[f32], individuals: &'a [Individual]) -> (&'a Individual, &'a Individual) {
     let mom_index = helper::select_index(w);
     let dad_index = helper::select_index(w);  
     (&individuals[mom_index], &individuals[dad_index])
@@ -27,7 +55,7 @@ pub fn find_fittest(population: &[Individual]) -> Individual {
     best_individual.clone()
 }
 
-pub fn get_cumulative_weights(individuals: &[Individual]) -> Vec<f64> {
+pub fn get_cumulative_weights(individuals: &[Individual]) -> Vec<f32> {
     let mut running_sum = 0.0;
     let mut cumulative_weights = vec![running_sum];
 
@@ -43,7 +71,7 @@ pub fn random_population(population_size: usize, points: &[Point]) -> Vec<Indivi
     let mut individuals:Vec<Individual> = Vec::new();
     
     for _ in 0..population_size {
-        let indiv = Individual::new(points);
+        let mut indiv = Individual::new(points);
         indiv.spawn(2);
         individuals.push(indiv);
     } 

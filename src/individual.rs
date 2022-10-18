@@ -1,10 +1,12 @@
 extern crate rand;
 
-use super::Point;
 use std::fmt;
 use self::rand::{thread_rng, Rng};
 
-pub const MIN_POSITIVE: f64 = 2.2250738585072014e-308f64;
+use super::Point;
+
+pub const MIN_POSITIVE: f32 = 2.2250738585072014e-308f32;
+pub const MAX_DEPTH: u32 = 6;
 
 #[derive(Debug, Clone)]
 pub enum Node<T> {
@@ -48,14 +50,13 @@ pub fn length_from_depth(depth: u32) -> usize {
 
 #[derive(Debug, Clone)]
 pub struct SymbolicBinaryHeap<T> {
-    depth: u32,
     heap: Vec<Option<Node<T>>>
 }
 
 impl fmt::Display for SymbolicBinaryHeap<f32> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let mut msg = String::new();
-        for i in 0..self.depth {
+        for i in 0..MAX_DEPTH {
             let data = &self.heap[length_from_depth(i)..length_from_depth(i + 1)];
             msg.push_str(&format!("{data:?}\n").to_string())
         }
@@ -64,9 +65,9 @@ impl fmt::Display for SymbolicBinaryHeap<f32> {
 }
 
 impl SymbolicBinaryHeap<f32> {
-    pub fn new(depth: u32) -> Self {
-        let heap: Vec<Option<Node<f32>>> = vec![None; length_from_depth(depth)];
-        SymbolicBinaryHeap {depth, heap}
+    pub fn new() -> Self {
+        let heap: Vec<Option<Node<f32>>> = vec![None; length_from_depth(MAX_DEPTH)];
+        SymbolicBinaryHeap {heap}
     }
     
     pub fn left(&mut self, base_idx: usize) -> &mut Option<Node<f32>> {
@@ -75,6 +76,10 @@ impl SymbolicBinaryHeap<f32> {
     
     pub fn right(&mut self, base_idx: usize) -> &mut Option<Node<f32>> {
         &mut self.heap[2 * base_idx + 2]
+    }
+    
+    pub fn parent(&mut self, idx: usize) -> &mut Option<Node<f32>> {
+        &mut self.heap[(idx - 1) / 2]
     }
     
     fn add_to_node(&mut self, idx: usize, left: Option<Node<f32>>, right: Option<Node<f32>>) {
@@ -153,78 +158,70 @@ impl SymbolicBinaryHeap<f32> {
 #[derive(Debug, Clone)]
 pub struct Individual {
     pub dna: SymbolicBinaryHeap<f32>,
-    pub fitness: f64,
+    pub fitness: f32,
 }
 
 impl Individual {
     pub fn new(points: &[Point]) -> Self {
-        let dna = points;
-        let fitness = fitness(&dna, &points);
+        let mut dna = SymbolicBinaryHeap::<f32>::new(); 
+        let fitness = fitness(&mut dna, &points);
         Individual {dna, fitness}
     }
 
-    pub fn spawn(&self, depth: usize) {
-        let mut v:Vec<usize> = (0..depth).collect();
-        thread_rng().shuffle(&mut v);
+    pub fn new_from(dna: SymbolicBinaryHeap<f32>, points: &[Point]) -> Self {
+        let mut dna = dna; 
+        let fitness = fitness(&mut dna, &points);
+        Individual {dna, fitness}
+    }
+
+    pub fn spawn(&mut self, depth: u32) {
+        self.dna.random_instantiate(0, depth);
     }
 
     pub fn cross_over(&self, other: &Individual, points: &[Point]) -> (Self, Self) {
-        let n = self.dna.len();
+        let n = MAX_DEPTH;
         let mut rng = thread_rng();
         let start = rng.gen_range(0, n - 1);
         let end = rng.gen_range(start + 1, n);
 
-        let daughter_dna = crossover_dna(&self.dna, &other.dna, start, end);
-        let son_dna = crossover_dna(&other.dna, &self.dna, start, end);
+        let daughter_dna =
+            crossover_dna(&self.dna, &other.dna, start, end);
+        let son_dna =
+            crossover_dna(&other.dna, &self.dna, start, end);
         
-        let daughter = Individual::new(daughter_dna, points);
-        let son = Individual::new(son_dna, points);
+        let daughter = Individual::new_from(daughter_dna, points);
+        let son = Individual::new_from(son_dna, points);
         
         (daughter, son)
     }
 
     pub fn mutate(&mut self, points: &[Point]) {
-        let i = thread_rng().gen_range(0, self.dna.len() - 1);
-        self.dna.swap(i, i + 1);
-        self.fitness = fitness(&self.dna, &points);
+        let i = thread_rng().gen_range(0, MAX_DEPTH - 1);
+        //self.dna.swap(i);
+        self.fitness = fitness(&mut self.dna, &points);
     }
 }
 
-fn fitness(dna: &[usize], points: &[Point]) -> f64 {
+fn fitness(dna: &mut SymbolicBinaryHeap<f32>, points: &[Point]) -> f32 {
+    let mut score: f32 = MIN_POSITIVE;
+
+    for point in points {
+        let value = dna.collapse(point.x as f32);
+        score += point.y as f32 - value;
+    }
+    1.0 / score
+}
+
+/*
+fn fitness(dna: &[usize], points: &[Point]) -> f32 {
     let d = dna.windows(2)
                .fold(MIN_POSITIVE, |acc, w| acc + points[w[0]].distance_squared(&points[w[1]]));
     1.0 / d
 }
+*/
 
-fn crossover_dna(mom: &[usize], dad: &[usize], start: usize, end: usize) -> Vec<usize> {
-    let mom_slice = &mom[start..=end];
-    let mut child: Vec<usize> = Vec::new();
-    
-    for i in 0..dad.len() {
-        if !mom_slice.contains(&dad[i]) {
-            child.push(dad[i]);
-        }
-    }
-    
-    let end_slice = &child.split_off(start);
-    child.extend_from_slice(mom_slice);
-    child.extend_from_slice(end_slice);
+fn crossover_dna(mom: &SymbolicBinaryHeap<f32>, dad: &SymbolicBinaryHeap<f32>,
+                 mom_idx: u32, dad_idx: u32) -> SymbolicBinaryHeap<f32> {
+    let child = SymbolicBinaryHeap::<f32>::new();
     child
 }
-
-/* 
------------------------------
-ALTERNATIVE FITNESS FUNCTION
------------------------------
-
-fn fitness(dna: &[usize], points: &[Point]) -> f64 {
-    let length = points.len() - 1;
-    let mut d = MIN_POSITIVE;
-
-    for i in 0..length {
-        let (j, k) = (dna[i], dna[i+1]);
-        d += points[j].distance_squared(&points[k]);
-    }
-    1.0 / d
-}
-*/

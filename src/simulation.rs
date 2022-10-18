@@ -1,9 +1,11 @@
 extern crate rand;
 extern crate indicatif;
 
-use super::*; 
 use self::rand::{thread_rng, Rng};
 use self::indicatif::ProgressIterator;
+
+use super::*;
+use crate::individual::SymbolicBinaryHeap;
 use helper::print_vec;
 
 pub struct Simulation {
@@ -19,8 +21,8 @@ pub struct Simulation {
     number_of_mutations: usize,
     number_of_crossovers: usize,
 
-    pub fitness: f64,
-    pub dna: Vec<usize>, 
+    pub fitness: f32,
+    pub dna: SymbolicBinaryHeap<f32>, 
 }
 
 impl Simulation {
@@ -36,7 +38,7 @@ impl Simulation {
         let number_of_mutations = 0;
         let number_of_crossovers = 0;
         let fitness = 0.0;
-        let dna: Vec<usize> = Vec::new(); 
+        let dna = SymbolicBinaryHeap::<f32>::new(); 
 
         Simulation { 
             iterations, 
@@ -142,14 +144,14 @@ fn debug_print(debug_level: usize,
         print!("{}, {}, {}, {},", i, n, champion.fitness, challenger.fitness);
 
         for i in 0..n {
-            print!(" {},", champion.dna[i]);
+            print!(" {},", champion.dna); // [i]
         }
 
         for i in 0..(n - 1) {
-            print!(" {},", challenger.dna[i]);
+            print!(" {},", challenger.dna); // [i]
         }
 
-        println!(" {}", challenger.dna[n - 1]);
+        println!(" {}", challenger.dna); // [n - 1]
     }
 
     if debug_level == 3 {

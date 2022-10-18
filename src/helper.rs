@@ -1,4 +1,6 @@
-use rand::{thread_rng, Rng};
+extern crate rand;
+
+use self::rand::{thread_rng, Rng};
 use std::fmt::Debug;
 use std::process;
 use std::fs::File;
@@ -9,16 +11,15 @@ pub fn print_vec<T: Debug>(v: &[T]) {
 }
 
 
-pub fn select_index(cumulative_weights: &[f64]) -> usize {
+pub fn select_index(cumulative_weights: &[f32]) -> usize {
     // TODO: Error Handling
     let w_sum = cumulative_weights.last().unwrap(); 
-    let r: f64 = thread_rng().gen_range(0.0, *w_sum);
+    let r: f32 = thread_rng().gen_range(0.0, *w_sum);
     cumulative_weights.iter().rposition(|&w| w < r).unwrap()
 }
 
 
 pub fn read_file(filename: &String) -> String {
-
     let mut file = File::open(filename).unwrap_or_else(|err| {
         eprintln!("Problem opening file. {:?}\n error: {}\n ", filename, err);
         process::exit(1)

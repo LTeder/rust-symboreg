@@ -1,9 +1,11 @@
 extern crate symboreg;
-use symboreg::dataset;
-use symboreg::{Point, Simulation};
-use symboreg::helper;
+
 use std::process;
 use std::env;
+
+use symboreg::{Point, Simulation};
+use symboreg::helper;
+use symboreg::string_to_points;
 
 fn main() {
     // ----------------------
@@ -42,7 +44,7 @@ fn main() {
          });
 
     let contents = helper::read_file(&city_filename);
-    let points: Vec<Point> = dataset::string_to_points(&contents);
+    let points: Vec<Point> = string_to_points(&contents);
     
     // ----------------------
     // RUN SIMULATION
