@@ -7,7 +7,13 @@ use symboreg::{Point, Simulation};
 use symboreg::helper;
 use symboreg::string_to_points;
 
+use symboreg::Individual;
+
 fn main() {
+    let test = Point::new(1.0, 1.0);
+    let guy = Individual::new(&[test]);
+    println!("{:?}", guy);
+    process::exit(0);
     // ----------------------
     // PARSE ARGUMENTS
     // ----------------------

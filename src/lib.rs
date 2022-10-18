@@ -1,6 +1,5 @@
 use std::str::FromStr;
 
-pub mod examples;
 pub mod helper;
 mod individual;
 mod simulation;

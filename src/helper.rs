@@ -10,14 +10,12 @@ pub fn print_vec<T: Debug>(v: &[T]) {
     for i in v.iter() { println!("{:?}", i); }   
 }
 
-
 pub fn select_index(cumulative_weights: &[f32]) -> usize {
     // TODO: Error Handling
     let w_sum = cumulative_weights.last().unwrap(); 
     let r: f32 = thread_rng().gen_range(0.0, *w_sum);
     cumulative_weights.iter().rposition(|&w| w < r).unwrap()
 }
-
 
 pub fn read_file(filename: &String) -> String {
     let mut file = File::open(filename).unwrap_or_else(|err| {
@@ -34,7 +32,6 @@ pub fn read_file(filename: &String) -> String {
 
     contents
 }
-
 
 pub fn parse_specs(contents: &str) -> Result<(usize, usize, usize, usize, f64, f64), String> { 
     // TODO: Expected number of arguments + Expected type and range of arguments
