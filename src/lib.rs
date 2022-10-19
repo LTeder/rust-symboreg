@@ -4,17 +4,17 @@ pub mod helper;
 mod individual;
 mod simulation;
 
-pub use individual::Individual;
+pub use individual::{Individual, SymbolicBinaryHeap, Node};
 pub use simulation::Simulation;
 
 #[derive(Debug, Clone)]
 pub struct Point {
-    pub x: f64,
-    pub y: f64,
+    pub x: f32,
+    pub y: f32,
 }
 
 impl Point {
-    pub fn new(x: f64, y: f64) -> Self {
+    pub fn new(x: f32, y: f32) -> Self {
         Point {x, y}
     }
 }
@@ -24,21 +24,21 @@ pub fn string_to_points(contents: &String) -> Vec<Point> {
     let mut points: Vec<Point> = Vec::new();
 
     for line in contents.lines() {
-        let values: Vec<f64> = line.split(',')
-                                   .map(|val| f64::from_str(val.trim())
+        let values: Vec<f32> = line.split(',')
+                                   .map(|val| f32::from_str(val.trim())
                                    .unwrap())
                                    .collect();
         
-        let c = Point::new(values[1], values[2]);
+        let c = Point::new(values[0], values[1]);
         points.push(c);
     }
     points
 }
 
-pub fn select_parents<'a>(w: &[f32], individuals: &'a [Individual]) -> (&'a Individual, &'a Individual) {
+pub fn select_parents(w: &[f32]) -> (usize, usize) {
     let mom_index = helper::select_index(w);
     let dad_index = helper::select_index(w);  
-    (&individuals[mom_index], &individuals[dad_index])
+    (mom_index, dad_index)
 }
 
 // max_by_key: Ord not implemented for f64

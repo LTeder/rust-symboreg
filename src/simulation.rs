@@ -3,10 +3,10 @@ extern crate indicatif;
 
 use self::rand::{thread_rng, Rng};
 use self::indicatif::ProgressIterator;
+use helper::print_vec;
 
 use super::*;
-use crate::individual::SymbolicBinaryHeap;
-use helper::print_vec;
+use crate::individual::{Individual, cross_over};
 
 pub struct Simulation {
     iterations: usize,
@@ -21,8 +21,7 @@ pub struct Simulation {
     number_of_mutations: usize,
     number_of_crossovers: usize,
 
-    pub fitness: f32,
-    pub dna: SymbolicBinaryHeap<f32>, 
+    pub champion: Individual
 }
 
 impl Simulation {
@@ -37,8 +36,7 @@ impl Simulation {
         let number_of_points = points.len();
         let number_of_mutations = 0;
         let number_of_crossovers = 0;
-        let fitness = 0.0;
-        let dna = SymbolicBinaryHeap::<f32>::new(); 
+        let champion = Individual::new(&points); 
 
         Simulation { 
             iterations, 
@@ -49,15 +47,14 @@ impl Simulation {
             points, 
             number_of_mutations,
             number_of_crossovers,
-            fitness,
-            dna,
+            champion
         }
     }
 
     fn generate_children(&mut self, mom: &Individual, dad: &Individual) -> (Individual, Individual) {
         if thread_rng().gen_bool(self.crossover_probability) {
             self.number_of_crossovers += 2;
-            mom.cross_over(dad, &self.points)
+            cross_over(mom, dad, &self.points)
         } else {
             (mom.clone(), dad.clone())
         }
@@ -70,16 +67,19 @@ impl Simulation {
         }
     }
 
-    pub fn generate_population(&mut self, individuals: Vec<Individual>) -> Vec<Individual> {
+    pub fn generate_population(&mut self, mut individuals: Vec<Individual>) -> Vec<Individual> {
         assert_eq!(self.population_size % 2, 0, "population_size:{} should be divisible by 2", self.population_size);
         
-        let cumulative_weights = get_cumulative_weights(&individuals);
+        let mut cumulative_weights = get_cumulative_weights(&individuals);
         let mut next_population = Vec::new();
 
         for _ in 0..(self.population_size / 2 ) { // generate two individuals per iteration 
 
-            let (mom, dad) = select_parents(&cumulative_weights, &individuals);
-            let (mut daughter, mut son) = self.generate_children(&mom, &dad);
+            let (mom_index, dad_index) =
+                select_parents(&mut cumulative_weights);
+            let mom: &Individual = &individuals[mom_index];
+            let dad: &Individual = &individuals[dad_index];
+            let (mut daughter, mut son) = self.generate_children(mom, dad);
             self.might_mutate_child(&mut daughter);
             self.might_mutate_child(&mut son);
 
@@ -105,8 +105,7 @@ impl Simulation {
             }
         }
 
-        self.fitness = champion.fitness;
-        self.dna = champion.dna;
+        self.champion = champion;
 
         if debug_level >= 2 { self.print(); }
     }
@@ -115,8 +114,8 @@ impl Simulation {
         let x = self.population_size * self.iterations;
 
         println!("\n --------------- \n STATS \n --------------- \n");
-        println!("BEST TRAVEL PATH: {:?}", self.dna);
-        println!("Fitness Score: {} ", self.fitness);
+        println!("BEST TRAVEL PATH: {:?}", self.champion.dna);
+        println!("Fitness Score: {} ", self.champion.fitness);
         println!("{} mutations out of {} individuals produced", self.number_of_mutations, x);
         println!("{} cross-overs out of {} individuals produced", self.number_of_crossovers, x);
 
