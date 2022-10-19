@@ -4,9 +4,14 @@
 
 # Usage
 ```bash
+$ cargo run ./data/specs/specs0.csv ./data/datasets/set0.csv > ./output0.csv
+```
+
+# Testing
+```bash
 $ cargo test -- --nocapture
 $ cargo build
-$ cargo run ./data/specs/specs0.csv ./data/datasets/set0.csv > ./output0.csv
+$ cargo run ./data/specs/specs0.csv ./data/datasets/set0.csv
 ```
 
 # Simulation
@@ -17,24 +22,25 @@ $ cargo run ./data/specs/specs0.csv ./data/datasets/set0.csv > ./output0.csv
 debug_level, skip, iterations, population_size, crossover_probability, mutation_probability
 
 where:
-- debug_level: 0, 1, 2, 3 or 4
-- skip: row in csv file will be written when iteration % skip == 0, should be unsigned integer >= 1
-- iterations: unsigned integer
-- population_size: should be an even integer and divisible by ten
+- debug_level: 0 (no output), 1 (CSV format), 2 (print champion and challenger), or 3 (print full population)
+- skip: an integer >= 1, debug print is called when iteration % skip == 0
+- iterations: an integer >= 1
+- population_size: an even integer, divisible by ten
 - crossover_probability: between 0.0 and 1.0
 - mutation_probability: between 0.0 and 1.0
 
 # ------------
 # ./datasets.csv
 # ------------
-id1, x1, y1
-id2, x2, y2
+x1, y1
+x2, y2
 # . . .
-idn, xn, yn
+xn, yn
 
+when debug_level == 1:
 # ------------
 # ./output.csv
 # ------------
-iteration_step, number_of_points, champion_fitness, challenger_fitness, champion_dna, challenger_dna
+iteration_step, champion_fitness, challenger_fitness, champion_dna, challenger_dna
 # . . .
 ```

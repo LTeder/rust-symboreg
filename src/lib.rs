@@ -1,10 +1,12 @@
 use std::str::FromStr;
 
 pub mod helper;
+mod sbh;
 mod individual;
 mod simulation;
 
-pub use individual::{Individual, SymbolicBinaryHeap, Node};
+pub use sbh::{SymbolicBinaryHeap, Node, MAX_IDX};
+pub use individual::Individual;
 pub use simulation::Simulation;
 
 #[derive(Debug, Clone)]
