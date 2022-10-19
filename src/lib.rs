@@ -66,12 +66,9 @@ pub fn get_cumulative_weights(individuals: &[Individual]) -> Vec<f32> {
 }
 
 pub fn random_population(population_size: usize, points: &[Point]) -> Vec<Individual> {
-    let number_of_points = points.len();
-    let mut individuals:Vec<Individual> = Vec::new();
-    
+    let mut individuals: Vec<Individual> = Vec::new();
     for _ in 0..population_size {
-        let mut indiv = Individual::new(points);
-        indiv.spawn(2);
+        let indiv = Individual::new(points);
         individuals.push(indiv);
     } 
     individuals

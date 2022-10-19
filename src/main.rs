@@ -11,6 +11,7 @@ use symboreg::string_to_points;
 use symboreg::{Individual, Node};
 
 fn main() {
+    /*
     let c1 = Point::new(1.0, 3.0);
     let c2 = Point::new(2.0, 5.0);
     let c3 = Point::new(3.0, 7.0);
@@ -30,7 +31,7 @@ fn main() {
     let solution = Individual::new_from(skull, &test);
     println!("{:?} {:?}", solution, solution.fitness);
     process::exit(0);
-
+    */
     // ----------------------
     // PARSE ARGUMENTS
     // ----------------------

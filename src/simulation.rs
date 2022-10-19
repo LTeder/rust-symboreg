@@ -6,7 +6,7 @@ use self::indicatif::ProgressIterator;
 use helper::print_vec;
 
 use super::*;
-use crate::individual::{Individual, cross_over};
+use crate::individual::Individual;
 
 pub struct Simulation {
     iterations: usize,
@@ -51,10 +51,10 @@ impl Simulation {
         }
     }
 
-    fn generate_children(&mut self, mom: &Individual, dad: &Individual) -> (Individual, Individual) {
+    fn generate_children(&mut self, mom: Individual, dad: &mut Individual) -> (Individual, Individual) {
         if thread_rng().gen_bool(self.crossover_probability) {
             self.number_of_crossovers += 2;
-            cross_over(mom, dad, &self.points)
+            mom.cross_over(dad, &self.points)
         } else {
             (mom.clone(), dad.clone())
         }
@@ -77,8 +77,8 @@ impl Simulation {
 
             let (mom_index, dad_index) =
                 select_parents(&mut cumulative_weights);
-            let mom: &Individual = &individuals[mom_index];
-            let dad: &Individual = &individuals[dad_index];
+            let mom: Individual = individuals[mom_index].clone();
+            let dad: &mut Individual = &mut individuals[dad_index];
             let (mut daughter, mut son) = self.generate_children(mom, dad);
             self.might_mutate_child(&mut daughter);
             self.might_mutate_child(&mut son);

@@ -11,7 +11,7 @@ pub const MAX_IDX: usize = length_from_depth(MAX_DEPTH);
 pub const MAX_NUMBER_NODE: f32 = 10.0;
 pub const MIN_NUMBER_NODE: f32 = -10.0;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Copy)]
 pub enum Node<T> {
     Add,
     Subtract,
@@ -187,6 +187,17 @@ impl SymbolicBinaryHeap<f32> {
         }
     }
 
+    /// Here, complexity is defined as the number of nodes in the heap
+    pub fn complexity(&mut self) -> u32 {
+        let mut complexity: u32 = 0;
+        for node in &self.heap {
+            if node.is_some() {
+                complexity += 1;
+            }
+        }
+        complexity
+    }
+
     /// Returns the depth of the deepest node in the binary heap
     pub fn depth(&mut self) -> u32 {
         // Get the largest index in the heap containing a node
@@ -204,6 +215,27 @@ impl SymbolicBinaryHeap<f32> {
             seek_idx = (seek_idx - 1) / 2;
         }
         depth
+    }
+
+    /// Returns the index in the heap of a randomized parent node for swapping
+    pub fn get_swapping_index(&mut self) -> usize {
+        let mut rng = thread_rng();
+        let target_depth = rng.gen_range(1, self.depth());
+        let mut depth_idx: usize = 0;
+        let mut seek_idx: usize = 0;
+        // This will fail because random descent doesn't guarantee target_depth
+        while depth_idx < target_depth as usize {
+            let use_right: bool = rng.gen();
+            let right_idx = 2 * seek_idx + 2;
+            let right_exists = self.heap[right_idx].is_some();
+            if use_right && right_exists {
+                seek_idx = right_idx;
+            } else {
+                seek_idx = right_idx - 1;
+            }
+            depth_idx += 1;
+        }
+        seek_idx
     }
     
     /// Recurses into child nodes to determine heap's result for variable
@@ -250,6 +282,7 @@ pub struct Individual {
 impl Individual {
     pub fn new(points: &[Point]) -> Self {
         let mut dna = SymbolicBinaryHeap::<f32>::new(); 
+        dna.random_instantiate(0, 2);
         let fitness = fitness(&mut dna, &points);
         Individual {dna, fitness}
     }
@@ -259,9 +292,32 @@ impl Individual {
         let fitness = fitness(&mut dna, &points);
         Individual {dna, fitness}
     }
+    
+    /// Choose a random target depth from each parent, and swap a random branch at that depth
+    /// Of these four individuals, remove the worst performers or the most complicated
+    /// Gendering of the individuals is done for clarity and dark humor
+    pub fn cross_over(mut self, father: &mut Individual, points: &[Point]) -> (Individual, Individual) {
+        let mut swap_idxs: Vec<(usize, usize)> = Vec::new();
+        swap_idxs.push((self.dna.get_swapping_index(), father.dna.get_swapping_index()));
 
-    pub fn spawn(&mut self, depth: u32) {
-        self.dna.random_instantiate(0, depth);
+        let (mut daughter_dna, mut son_dna) = (self.dna.clone(), father.dna.clone());
+        while let Some((mom_idx, dad_idx)) = swap_idxs.pop() {
+            swap(&mut daughter_dna.heap[mom_idx], &mut son_dna.heap[dad_idx]);
+            let daughter_left_idx = 2 * mom_idx + 1;
+            let daughter_right_idx = 2 * mom_idx + 2;
+            let son_left_idx = 2 * dad_idx + 1;
+            let son_right_idx = 2 * dad_idx + 2;
+            if daughter_left_idx <= MAX_IDX && son_left_idx <= MAX_IDX {
+                swap_idxs.push((daughter_left_idx, son_left_idx));
+            }
+            if daughter_right_idx <= MAX_IDX && son_right_idx <= MAX_IDX {
+                swap_idxs.push((daughter_right_idx, son_right_idx));
+            }
+        }
+
+        let daughter = Individual::new_from(daughter_dna, points);
+        let son = Individual::new_from(son_dna, points);
+        (daughter, son)
     }
 
     /// Perform a random mutation from an array of possible actions
@@ -270,57 +326,6 @@ impl Individual {
         //self.dna.swap(i);
         self.fitness = fitness(&mut self.dna, &points);
     }
-}
-
-/// Returns the index in the heap of a randomized parent node for swapping
-pub fn get_swapping_index(mut sbh: SymbolicBinaryHeap<f32>) -> usize {
-    let mut rng = thread_rng();
-    let target_depth = rng.gen_range(1, sbh.depth());
-    let mut depth_idx: usize = 0;
-    let mut seek_idx: usize = 0;
-    // This will fail because random descent doesn't guarantee target_depth
-    while depth_idx < target_depth as usize {
-        let use_right: bool = rng.gen();
-        let right_idx = 2 * seek_idx + 2;
-        let right_exists = sbh.heap[right_idx].is_some();
-        if use_right && right_exists {
-            seek_idx = right_idx;
-        } else {
-            seek_idx = right_idx - 1;
-        }
-        depth_idx += 1;
-    }
-    seek_idx
-}
-
-fn _cross_over(daughter_idx: usize, son_idx: usize,
-               mut daughter: SymbolicBinaryHeap<f32>, mut son: SymbolicBinaryHeap<f32>) {
-    swap(&mut daughter.heap[daughter_idx], &mut son.heap[son_idx]);
-    let daughter_left_idx = 2 * daughter_idx + 1;
-    let daughter_right_idx = 2 * daughter_idx + 2;
-    let son_left_idx = 2 * son_idx + 1;
-    let son_right_idx = 2 * son_idx + 2;
-    if daughter_left_idx <= MAX_IDX && son_left_idx <= MAX_IDX {
-        _cross_over(daughter_left_idx, son_left_idx, daughter, son)
-    }
-    if daughter_right_idx <= MAX_IDX && son_right_idx <= MAX_IDX {
-        _cross_over(daughter_left_idx, son_left_idx, daughter, son)
-    }
-}
-
-/// Choose a random target depth from each parent, and swap a random branch at that depth
-/// Of these four individuals, remove the worst performers or the most complicated
-/// Gendering of the individuals is done for clarity and dark humor
-pub fn cross_over(mother: &Individual, father: &Individual,
-                  points: &[Point]) -> (Individual, Individual) {
-    let mom_swap_idx: usize = get_swapping_index(mother.dna.clone());
-    let dad_swap_idx: usize = get_swapping_index(father.dna.clone());
-    let daughter_dna = mother.dna.clone();
-    let son_dna = father.dna.clone();
-    _cross_over(mom_swap_idx, dad_swap_idx, daughter_dna, son_dna);
-    let daughter = Individual::new_from(daughter_dna, points);
-    let son = Individual::new_from(son_dna, points);
-    (daughter, son)
 }
 
 /// Sum of the squared error at each point
