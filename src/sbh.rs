@@ -51,7 +51,7 @@ pub const fn length_from_depth(depth: u32) -> usize {
 #[derive(Debug, Clone)]
 pub struct SymbolicBinaryHeap<T> {
     pub heap: Vec<Option<Node<T>>>,
-    rng: rand::ThreadRng
+    pub rng: rand::ThreadRng
 }
 
 /// Prints each level on a new line
@@ -79,12 +79,18 @@ impl SymbolicBinaryHeap<f32> {
         let heap: Vec<Option<Node<f32>>> = heap;
         SymbolicBinaryHeap {heap, rng: thread_rng()}
     }
+
+    // Performs random_instantiate on an empty heap
+    pub fn spawn(&mut self) {
+        let depth = self.rng.gen_range(1, MAX_DEPTH) + 1;
+        self.random_instantiate(0, depth);
+    }
     
     /// Returns the left child node (the only child of Sine/Cosine nodes)
     pub fn left(&mut self, base_idx: usize) -> &mut Option<Node<f32>> {
         let left_idx = 2 * base_idx + 1;
-        if left_idx > self.heap.len() - 1 {
-            panic!("Attempted to find child below MAX_DEPTH.\nself: {:?}", self)
+        if left_idx > MAX_IDX {
+            panic!("Attempted to find child at {}, below MAX_DEPTH.\nself:\n{}", left_idx, self)
         }
         &mut self.heap[left_idx]
     }
@@ -92,16 +98,16 @@ impl SymbolicBinaryHeap<f32> {
     /// Returns the right child node (the only child of Sine/Cosine nodes)
     pub fn right(&mut self, base_idx: usize) -> &mut Option<Node<f32>> {
         let right_idx = 2 * base_idx + 2;
-        if right_idx > self.heap.len() - 1 {
-            panic!("Attempted to find child below MAX_DEPTH.\nself: {:?}", self)
+        if right_idx > MAX_IDX {
+            panic!("Attempted to find child at {}, below MAX_DEPTH.\nself:\n{}", right_idx, self)
         }
         &mut self.heap[right_idx]
     }
     
     /// Returns the parent node
     pub fn parent(&mut self, idx: usize) -> &mut Option<Node<f32>> {
-        if idx == 0 {
-            panic!("Attempted to find parent at invalid index{}.\nself: {:?}", idx, self)
+        if idx < 1 {
+            panic!("Attempted to find parent at invalid index {}.\nself:\n{}", idx, self)
         }
         &mut self.heap[(idx - 1) / 2]
     }
@@ -150,13 +156,16 @@ impl SymbolicBinaryHeap<f32> {
     
     /// Determines how many children a node can take and applies them
     /// Helper function for random SymbolicBinaryHeap generation
-    fn fill_node(&mut self, idx: usize, getter: fn() -> Option<Node<f32>> ) {
+    fn fill_node(&mut self, idx: usize, getter1: fn() -> Option<Node<f32>>,
+                                        getter2: fn() -> Option<Node<f32>>) {
+        assert!(MAX_IDX > idx,
+            "Attempted to find parent at invalid index {}.\nself:\n{}", idx, self);
         match self.heap[idx] {
             Some(Node::Add) | Some(Node::Subtract) |
             Some(Node::Multiply) | Some(Node::Divide) =>
-                self.add_to_node(idx, getter(), getter()),
+                self.add_to_node(idx, getter1(), getter2()),
             Some(Node::Sine) | Some(Node::Cosine) =>
-                self.add_to_node(idx, getter(), None),
+                self.add_to_node(idx, getter1(), None),
             _ => ()
         };
     }
@@ -166,21 +175,29 @@ impl SymbolicBinaryHeap<f32> {
     /// A non-zero base_idx is used as a potential mutation
     pub fn random_instantiate(&mut self, base_idx: usize, depth: u32) {
         if depth > 1 {
+            assert!(depth <= MAX_DEPTH,
+                "Attempted to random_instantiate from index {} with depth {}.\nself:\n{}",
+                base_idx, depth, self);
             self.heap[base_idx] = get_op();
             for layer in 0..(depth - 2) {
                 let nodes_in_layer = 2_usize.pow(layer);
                 for i in 0..nodes_in_layer {
                     let idx = base_idx + layer as usize + i;
-                    self.fill_node(idx, get_op);
+                    let use_op: bool = self.rng.gen();
+                    let getter: fn() -> Option<Node<f32>> =
+                        if use_op {get_op} else {get_val};
+                    self.fill_node(idx, get_op, getter);
                 }
             }
             let nodes_in_layer = 2_usize.pow(depth - 2);
             for i in 0..nodes_in_layer {
-                let idx = base_idx + nodes_in_layer - 1 + i;
-                self.fill_node(idx, get_val)
+                let idx = base_idx + depth as usize - 2 + i;
+                self.fill_node(idx, get_val, get_val);
             }
-        } else {
+        } else if depth == 1 {
             self.heap[base_idx] = get_val();
+        } else {
+            panic!("Tried to instantiate with bad depth {}.\nself:\n{}", depth, self);
         }
     }
 
@@ -256,23 +273,58 @@ impl SymbolicBinaryHeap<f32> {
         }
         ops
     }
+
+    /// Alter a Node::Number value
+    fn _mutate_number(&mut self, terminal_idxs: &Vec<usize>) {
+        let idx = self.rng.gen_range(0, terminal_idxs.len());
+        let choice = terminal_idxs[idx];
+        let mut num;
+        match self.heap[choice] {
+            Some(Node::Variable) => {
+                num = self.rng.gen_range(MIN_NUMBER_NODE, MAX_NUMBER_NODE) },
+            Some(Node::Number(n)) => { num = n; },
+            _ => { panic!("Tried to mutate None at {}.\nself:\n{}", choice, self) }
+        };
+        let factor = self.rng.gen_range(-2.0, 2.0);
+        let do_add: bool = self.rng.gen();
+        num = if do_add {num + factor} else {num * factor};
+        num = num.clamp(MIN_NUMBER_NODE, MAX_NUMBER_NODE);
+        self.heap[choice] = Some(Node::Number(num));
+
+    }
     
-    /// Alter a random terminal node with a constant
+    /// Alter a random terminal node with a constant, increasing depth
     pub fn mutate_constant(&mut self) {
-        let terminals: Vec<usize> = self.get_terminal_idxs();
-        let mut choice;
-        let mut spawn_depth: u32 = 2;
-        loop {
-            let idx = self.rng.gen_range(1, terminals.len());
-            choice = terminals[idx];
-            if 2 * idx + 2 < MAX_IDX {
-                if 4 * idx + 6 < MAX_IDX {
-                    spawn_depth = 3
+        let mut terminals: Vec<usize> = self.get_terminal_idxs();
+        let terminals_len = terminals.len();
+        let mut idx: usize;
+        if self.depth() == MAX_DEPTH {
+            self._mutate_number(&terminals);
+        } else {
+            let mut choice: usize;
+            let mut spawn_depth = 0;
+            for _ in 0..terminals_len {
+                spawn_depth = 1;
+                idx = self.rng.gen_range(0, terminals_len);
+                choice = terminals.swap_remove(idx);
+                idx = choice;
+                loop {
+                    idx = 2 * idx + 2;
+                    spawn_depth += 1; // so spawn_depth >= 2
+                    if idx > MAX_IDX { break; }
                 }
-                break;
+                if spawn_depth > 1 {
+                    if spawn_depth > 2 {
+                        spawn_depth = self.rng.gen_range(2, spawn_depth);
+                    }
+                    self.random_instantiate(choice, spawn_depth);
+                    break;
+                }
+            }
+            if spawn_depth == 0 {
+
             }
         }
-        self.random_instantiate(choice, spawn_depth);
     }
     
     /// Replace a random operation node with a terminal node
@@ -327,8 +379,13 @@ impl SymbolicBinaryHeap<f32> {
                 Some(Node::Divide) => ops.push((i, Node::Multiply)),
                 Some(Node::Sine) => ops.push((i, Node::Cosine)),
                 Some(Node::Cosine) => ops.push((i, Node::Sine)),
-                Some(Node::Number(_)) =>
-                    ops.push((i, Node::Number(self.rng.gen_range(MIN_NUMBER_NODE, MAX_NUMBER_NODE)))),
+                Some(Node::Number(n)) => {
+                    let factor = self.rng.gen_range(-2.0, 2.0);
+                    let do_add: bool = self.rng.gen();
+                    let mut num = if do_add {n + factor} else {n * factor};
+                    num = num.clamp(MIN_NUMBER_NODE, MAX_NUMBER_NODE);
+                    ops.push((i, Node::Number(num)))
+                },
                 _ => ()
             };
         }
@@ -338,22 +395,20 @@ impl SymbolicBinaryHeap<f32> {
     
     /// Recurses into child nodes to determine heap's result for variable
     fn _collapse(&mut self, idx: usize, variable: f32) -> f32{
-        let l = if self.left(idx).is_some() {
-            self._collapse(2 * idx + 1, variable)
-        } else {
-            f32::MIN_POSITIVE
-        };
-        let r = if self.right(idx).is_some() {
-            self._collapse(2 * idx + 2, variable)
-        } else {
-            f32::MIN_POSITIVE
-        };
+        let (left_idx, right_idx) = (2 * idx + 1, 2 * idx + 2);
+        let (mut l, mut r) = (0.0, 0.0);
+        if left_idx < MAX_IDX && self.heap[left_idx].is_some() {
+            l = self._collapse(left_idx, variable);
+        }
+        if right_idx < MAX_IDX && self.heap[right_idx].is_some() {
+            r = self._collapse(right_idx, variable);
+        }
         match self.heap[idx] {
             Some(Node::Add) => {l + r},
             Some(Node::Subtract) => {l - r},
             Some(Node::Multiply) => {l * r},
             Some(Node::Divide) => {
-                assert!(r != 0.0, "Attempted divide by zero.");
+                assert!(r != 0.0, "Attempted divide by zero.\nself:\n{}", self);
                 l / r
             },
             Some(Node::Sine) => l.sin(),

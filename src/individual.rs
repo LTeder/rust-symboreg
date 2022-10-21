@@ -13,8 +13,8 @@ pub struct Individual {
 
 impl Individual {
     pub fn new(points: &[Point]) -> Self {
-        let mut dna = SymbolicBinaryHeap::<f32>::new(); 
-        dna.random_instantiate(0, 2);
+        let mut dna = SymbolicBinaryHeap::<f32>::new();
+        dna.spawn();
         let fitness = fitness(&mut dna, &points);
         Individual {dna, fitness}
     }
