@@ -9,6 +9,7 @@ use super::{Point, SymbolicBinaryHeap, MAX_IDX};
 pub struct Individual {
     pub dna: SymbolicBinaryHeap<f32>,
     pub fitness: f32,
+    pub evaluations: usize
 }
 
 impl Individual {
@@ -16,13 +17,15 @@ impl Individual {
         let mut dna = SymbolicBinaryHeap::<f32>::new();
         dna.spawn();
         let fitness = fitness(&mut dna, &points);
-        Individual {dna, fitness}
+        let evaluations: usize = 1;
+        Individual {dna, fitness, evaluations}
     }
 
     pub fn new_from(dna: SymbolicBinaryHeap<f32>, points: &[Point]) -> Self {
         let mut dna = dna; 
         let fitness = fitness(&mut dna, &points);
-        Individual {dna, fitness}
+        let evaluations: usize = 1;
+        Individual {dna, fitness, evaluations}
     }
 
     pub fn complexity(&mut self) -> u32 {
@@ -50,22 +53,22 @@ impl Individual {
                 swap_idxs.push((daughter_right_idx, son_right_idx));
             }
         }
-        let daughter = Individual::new_from(daughter_dna, points);
+        // Choose the two best individuals, carrying evalations into offspring
         let mut son = Individual::new_from(son_dna, points);
-        // Choose the two best individuals
-        if father.fitness > son.fitness || father.complexity() <= son.complexity() {
-            son = Individual::new_from(father.dna.clone(), points);
-            if daughter.fitness > self.fitness {
-                return (daughter, son);
-            } else {
-                return (self, son);
-            }
+        if (father.fitness > son.fitness && father.complexity() == son.complexity())
+                                         || father.complexity()  < son.complexity() {
+            son = Individual::new_from(father.dna.clone(), points); // father becomes son
+            son.evaluations += 1 + father.evaluations;
         } else {
-            if daughter.fitness > self.fitness {
-                return (daughter, son);
-            } else {
-                return (self, son);
-            }
+            son.evaluations += father.evaluations;
+        }
+        let mut daughter = Individual::new_from(daughter_dna, points);
+        if daughter.fitness > self.fitness {
+            daughter.evaluations += self.evaluations;
+            return (daughter, son);
+        } else {
+            self.evaluations += 1;
+            return (self, son);
         }
     }
 
@@ -73,31 +76,37 @@ impl Individual {
     pub fn mutate(&mut self, points: &[Point]) {
         let mut rng = thread_rng();
         if self.dna.depth() > 2 {
-            let op_idx = rng.gen_range(0, 4);
-            match op_idx {
+            match rng.gen_range(0, 4) {
                 0 => self.dna.mutate_constant(),
                 1 => self.dna.mutate_clip(),
                 2 => self.dna.mutate_swap(),
                 _ => self.dna.mutate_similar()
             };
         } else {
-            let op_idx = rng.gen_range(0, 2);
-            match op_idx {
+            match rng.gen_range(0, 2) {
                 0 => self.dna.mutate_constant(),
                 _ => self.dna.mutate_similar()
             };
         }
+        self.update_fitness(&points);
+    }
+
+    pub fn update_fitness(&mut self, points: &[Point]) {
         self.fitness = fitness(&mut self.dna, &points);
+        self.evaluations += 1;
     }
 }
 
 /// Sum of the squared error at each point
 fn fitness(dna: &mut SymbolicBinaryHeap<f32>, points: &[Point]) -> f32 {
-    let mut score: f32 = f32::MIN_POSITIVE;
-
+    let mut score: f32 = f32::EPSILON;
     for point in points {
         let difference = point.y - dna.collapse(point.x);
         score +=  difference.powi(2);
+    }
+    let has_variable: bool = dna.has_variable();
+    if !has_variable { // Penalize constant functions
+        score /= 10.0;
     }
     1.0 / score
 }

@@ -12,9 +12,13 @@ pub fn print_vec<T: Debug>(v: &[T]) {
 
 pub fn select_index(cumulative_weights: &[f32]) -> usize {
     // To do: Error Handling
-    let w_sum = cumulative_weights.last().unwrap(); 
-    let r: f32 = thread_rng().gen_range(0.0, *w_sum);
-    cumulative_weights.iter().rposition(|&w| w < r).unwrap()
+    let last = cumulative_weights.last();
+    //let max = cumulative_weights.iter().reduce(f32::max).max();
+    let w_sum = last.unwrap().min(f32::MAX);
+    let r: f32 = thread_rng().gen_range(0.0, w_sum);
+    cumulative_weights.iter().rposition(|&w| w < r).unwrap_or({
+        thread_rng().gen_range(0, cumulative_weights.len())
+    })
 }
 
 pub fn read_file(filename: &String) -> String {
@@ -22,14 +26,11 @@ pub fn read_file(filename: &String) -> String {
         eprintln!("Problem opening file. {:?}\n error: {}\n ", filename, err);
         process::exit(1)
     });
-
     let mut contents = String::new();
-
     file.read_to_string(&mut contents).unwrap_or_else(|err| { 
         eprintln!("Problem reading file.\n error: {}", err); 
         process::exit(1)
     });
-
     contents
 }
 
@@ -38,7 +39,6 @@ pub fn parse_specs(contents: &str) -> Result<(usize, usize, usize, usize, f64, f
     let v: Vec<String> = contents.split(',')
                                .map(|val| val.trim().to_string())
                                .collect();
-
     if v.len() != 6 {
         return Err("Unexpected number of specs (must be exactly 6)".to_string());
     }

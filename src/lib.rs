@@ -24,7 +24,6 @@ impl Point {
 pub fn string_to_points(contents: &String) -> Vec<Point> {
     // To do: Error handling: Unwrapping of line + expected # elements 
     let mut points: Vec<Point> = Vec::new();
-
     for line in contents.lines() {
         let values: Vec<f32> = line.split(',')
                                    .map(|val| f32::from_str(val.trim())
@@ -47,7 +46,6 @@ pub fn select_parents(w: &[f32]) -> (usize, usize) {
 // population.iter().max_by_key(|i| i.fitness).unwrap().clone()
 pub fn find_fittest(population: &[Individual]) -> Individual {
     let mut best_individual = &population[0];
-    
     for individual in population {
         if best_individual.fitness > individual.fitness {
             best_individual = individual;
@@ -57,12 +55,11 @@ pub fn find_fittest(population: &[Individual]) -> Individual {
 }
 
 pub fn get_cumulative_weights(individuals: &[Individual]) -> Vec<f32> {
-    let mut running_sum = 0.0;
-    let mut cumulative_weights = vec![running_sum];
-
-    for i in individuals {
-        running_sum += i.fitness;
-        cumulative_weights.push(running_sum);
+    let mut running_sum = f32::MIN_POSITIVE;
+    let mut cumulative_weights: Vec<f32> = vec![0.0; individuals.len()];
+    for (i, individual) in individuals.iter().enumerate() {
+        running_sum += individual.fitness;
+        cumulative_weights[i] += running_sum;
     }
     cumulative_weights
 }
