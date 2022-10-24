@@ -333,7 +333,9 @@ impl SymbolicBinaryHeap<f32> {
     /// Returns the depth of the deepest node in the binary heap
     /// Assumes each operation node has at least one terminal node below it
     pub fn depth(&mut self) -> u32 {
-        depth_from_idx(*self.get_checked_terminals().last().unwrap())
+        depth_from_idx(*self.get_terminal_idxs().last().unwrap_or( {
+            self.random_instantiate(0, 2);
+            &2}))
     }
 
     /// Performs self.get_terminal_idxs() and checks if empty
@@ -384,9 +386,11 @@ impl SymbolicBinaryHeap<f32> {
         let parent_idx = (idx - 1) / 2;
         match self.parent(idx) {
             Some(Node::Sine) | Some(Node::Cosine) =>
-                if parent_idx == idx / 2 && self.right(parent_idx).is_some() {
-                    self._delete_from_idx(idx + 1);
-                    self.heap[idx + 1] = None;
+                if parent_idx == idx / 2 {
+                    if self.right(parent_idx).is_some() {
+                        self._delete_from_idx(idx + 1);
+                        self.heap[idx + 1] = None;
+                    }
                 } else if self.left(parent_idx).is_some() {
                     self._delete_from_idx(idx - 1);
                     self.heap[idx - 1] = None;
@@ -413,7 +417,8 @@ impl SymbolicBinaryHeap<f32> {
                     if self.left(parent_idx).is_none() {
                         match self.parent(parent_idx) {
                             Some(Node::Sine) | Some(Node::Cosine) => (),
-                            None => panic!("Lost terminal node.\nself:\n{}\n", self),
+                            Some(Node::Variable) | Some(Node::Number(_)) | None =>
+                                panic!("Lost terminal node.\nself:\n{}\n", self),
                             _ => *self.left(parent_idx) = get_val()
                         };
                     }
@@ -499,7 +504,10 @@ impl SymbolicBinaryHeap<f32> {
     /// Replace a random operation node with a terminal node
     pub fn mutate_clip(&mut self) {
         let ops: Vec<usize> = self.get_op_idxs();
-        assert!(ops.len() > 1, "Tried to clip the top (operation) node.\nself:\n{}\n", self);
+        if ops.len() < 2 {
+            self.random_instantiate(0, 3);
+            return;
+        }
         let choice = ops[self.rng.gen_range(1, ops.len())];
         self.delete_from_idx(choice);
     }
@@ -507,7 +515,6 @@ impl SymbolicBinaryHeap<f32> {
     /// Swap two random branches
     pub fn mutate_swap(&mut self) {
         // Get parent node indicies
-        let full_depth = self.depth();
         let mut nodes: Vec<usize> = Vec::new();
         for (i, node) in self.heap.iter().enumerate() {
             match node {
@@ -523,8 +530,8 @@ impl SymbolicBinaryHeap<f32> {
             choice2 = nodes.swap_remove(self.rng.gen_range(0, nodes.len()));
             let choice2_depth = self.heap_at_idx(choice2).depth();
             if !check_related(choice1, choice2) &&
-                    full_depth - choice1_depth + choice2_depth <= MAX_DEPTH && 
-                    full_depth - choice2_depth + choice1_depth <= MAX_DEPTH {
+                    self.depth() - choice1_depth + choice2_depth <= MAX_DEPTH && 
+                    self.depth() - choice2_depth + choice1_depth <= MAX_DEPTH {
                 break;
             }
             choice2 = MAX_IDX + 1;
