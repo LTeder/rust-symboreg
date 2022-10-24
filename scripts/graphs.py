@@ -10,17 +10,17 @@ assert data_dir.exists()
 # Categorize the output of different program configurations by filename
 
 # Champion & Challenger - All Approaches
-for pattern, label, errorevery in [("output_e?.csv", "Evolutionary Algorithm", 10),
-                                   ("output_h?.csv", "Hill Climber", 10),
-                                   ("output_r?.csv", "Random Search", 1)]:
+for pattern, label, errorevery in [("output_b_r?.csv", "Random Search", 10)]:
     data = {}
     for csv_path in data_dir.glob(pattern):
         with open(str(csv_path)) as f:
             reading = reader(f)
             for line in reading:
+                if not line:
+                    break
                 tag = int(line[1])
                 if tag not in data:
-                    data[tag] = [[float(line[2]), float(line[4])]]
+                    data[tag] = [[float(line[2]), float(line[3])]]
                     continue
                 data[tag] += [[float(line[2]), float(line[3])]]
 
@@ -31,7 +31,7 @@ for pattern, label, errorevery in [("output_e?.csv", "Evolutionary Algorithm", 1
 
     plt.errorbar(x, y, yerr = errs, errorevery = errorevery, label = label)
 
-plt.suptitle("Shortest Path")
+plt.suptitle("Learning Curves")
 plt.legend(loc = "lower right")
 plt.xlabel("Evaluations")
 plt.ylabel("Fitness")
@@ -40,12 +40,14 @@ plt.savefig(base / "graph_s.png",
 plt.close()
 
 # Champion & Challenger - Detailed View
-for pattern, label in [("output_e?.csv", "Evolutionary Algorithm")]:
+for pattern, label in [("output_b_r?.csv", "Random Search")]:
     data = {}
     for csv_path in data_dir.glob(pattern):
         with open(str(csv_path)) as f:
             reading = reader(f)
             for line in reading:
+                if not line:
+                    break
                 tag = int(line[1])
                 if tag not in data:
                     data[tag] = [[float(line[2]), float(line[3])]]
@@ -59,7 +61,7 @@ for pattern, label in [("output_e?.csv", "Evolutionary Algorithm")]:
 
 plt.xlabel("Evaluations")
 plt.ylabel("Fitness")
-plt.suptitle("Evolutionary Algorithm")
+plt.suptitle("Random Search")
 plt.savefig(base / "graph_s_dot.png",
             dpi = 650, bbox_inches = "tight")
 plt.close()

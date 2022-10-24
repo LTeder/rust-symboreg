@@ -42,12 +42,10 @@ pub fn select_parents(w: &[f32]) -> (usize, usize) {
     (mom_index, dad_index)
 }
 
-// max_by_key: Ord not implemented for f64
-// population.iter().max_by_key(|i| i.fitness).unwrap().clone()
 pub fn find_fittest(population: &[Individual]) -> Individual {
     let mut best_individual = &population[0];
     for individual in population {
-        if best_individual.fitness > individual.fitness {
+        if best_individual.fitness < individual.fitness {
             best_individual = individual;
         }
     }

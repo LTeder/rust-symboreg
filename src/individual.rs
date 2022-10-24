@@ -27,17 +27,16 @@ impl Individual {
         let evaluations: usize = 1;
         Individual {dna, fitness, evaluations}
     }
-
-    pub fn complexity(&mut self) -> u32 {
-        self.dna.complexity()
-    }
     
     /// Choose a random target depth from each parent, and swap a random branch at that depth
     /// Of these four individuals, remove the worst performers or the most complicated
     /// Gendering of the individuals is done for clarity and dark humor
-    pub fn cross_over(mut self, father: &mut Individual, points: &[Point]) -> (Individual, Individual) {
+    pub fn cross_over(mut self, father: &mut Individual, points: &[Point])
+                                               -> (Individual, Individual) {
         let mut swap_idxs: Vec<(usize, usize)> = Vec::new();
-        swap_idxs.push((self.dna.get_swapping_index(), father.dna.get_swapping_index()));
+        swap_idxs.push((self.dna.get_swap_idx(), father.dna.get_swap_idx()));
+        self.dna.check_swap_idx(swap_idxs[0].0);
+        father.dna.check_swap_idx(swap_idxs[0].1);
         // Swap values between the potential offspring
         let (mut daughter_dna, mut son_dna) = (self.dna.clone(), father.dna.clone());
         while let Some((mom_idx, dad_idx)) = swap_idxs.pop() {
@@ -46,7 +45,7 @@ impl Individual {
             let daughter_right_idx = 2 * mom_idx + 2;
             let son_left_idx = 2 * dad_idx + 1;
             let son_right_idx = 2 * dad_idx + 2;
-            if daughter_left_idx <= MAX_IDX && son_left_idx <= MAX_IDX {
+            if daughter_left_idx < MAX_IDX && son_left_idx < MAX_IDX {
                 swap_idxs.push((daughter_left_idx, son_left_idx));
             }
             if daughter_right_idx <= MAX_IDX && son_right_idx <= MAX_IDX {
@@ -55,16 +54,13 @@ impl Individual {
         }
         // Choose the two best individuals, carrying evalations into offspring
         let mut son = Individual::new_from(son_dna, points);
-        if (father.fitness > son.fitness && father.complexity() == son.complexity())
-                                         || father.complexity()  < son.complexity() {
+        if (father.fitness > son.fitness && father.dna.complexity() == son.dna.complexity())
+                || father.dna.complexity()  < son.dna.complexity() {
             son = Individual::new_from(father.dna.clone(), points); // father becomes son
-            son.evaluations += 1 + father.evaluations;
-        } else {
-            son.evaluations += father.evaluations;
+            son.evaluations += 1;
         }
-        let mut daughter = Individual::new_from(daughter_dna, points);
+        let daughter = Individual::new_from(daughter_dna, points);
         if daughter.fitness > self.fitness {
-            daughter.evaluations += self.evaluations;
             return (daughter, son);
         } else {
             self.evaluations += 1;
@@ -99,14 +95,13 @@ impl Individual {
 
 /// Sum of the squared error at each point
 fn fitness(dna: &mut SymbolicBinaryHeap<f32>, points: &[Point]) -> f32 {
-    let mut score: f32 = f32::EPSILON;
+    let mut squared_error: f32 = f32::MIN_POSITIVE;
     for point in points {
         let difference = point.y - dna.collapse(point.x);
-        score +=  difference.powi(2);
+        squared_error +=  difference.powi(2);
     }
-    let has_variable: bool = dna.has_variable();
-    if !has_variable { // Penalize constant functions
-        score /= 10.0;
+    if !dna.has_variable() { // Penalize constant functions
+        squared_error *= 10.0;
     }
-    1.0 / score
+    1.0 / squared_error
 }

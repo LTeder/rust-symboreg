@@ -8,6 +8,7 @@ Cargo.lock
 
 # Additional data/ files
 data/**
+graph*
 !data/datasets/2xplus1.csv
 !data/output/output0.csv
 !data/specs/randomsearch.csv

@@ -1,0 +1,6 @@
+name: symboreg_graphs
+channels:
+    - conda-forge
+dependencies:
+    - matplotlib
+    - numpy

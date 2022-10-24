@@ -7,6 +7,7 @@ use helper::print_vec;
 
 use super::*;
 use crate::individual::Individual;
+use crate::sbh::get_val;
 
 pub struct Simulation {
     iterations: usize,
@@ -55,21 +56,10 @@ impl Simulation {
         }
     }
 
-    fn generate_children(&mut self, mut mom: Individual, dad: &mut Individual)
+    fn generate_children(&mut self, mom: Individual, dad: &mut Individual)
                                                    -> (Individual, Individual) {
         if thread_rng().gen_bool(self.crossover_probability) {
-            // Can't cross over when depth == 1
-            if mom.dna.depth() == 1 {
-                mom.dna.random_instantiate(0, 2);
-                mom.update_fitness(&self.points);
-            }
-            if dad.dna.depth() == 1 {
-                dad.dna.random_instantiate(0, 2);
-                dad.update_fitness(&self.points);
-            }
             self.number_of_crossovers += 2;
-            assert!(mom.dna.depth() > 1 && dad.dna.depth() > 1,
-                    "\na:\n{}\nb:\n{}\n", mom.dna, dad.dna);
             mom.cross_over(dad, &self.points)
         } else {
             (mom, dad.clone())
@@ -83,6 +73,31 @@ impl Simulation {
         }
     }
 
+    fn check_individual(&self, guy: &mut Individual) { 
+        if guy.dna.heap[0].is_none() || guy.dna.depth() == 1 {
+            guy.dna.random_instantiate(0, 2);
+            guy.update_fitness(&self.points);
+        }
+        match guy.dna.heap[0] {
+            Some(Node::Add) | Some(Node::Subtract) |
+            Some(Node::Multiply) | Some(Node::Divide) => {
+                if guy.dna.heap[1].is_none() {
+                    guy.dna.heap[1] = get_val();
+                    guy.update_fitness(&self.points);
+                } else if guy.dna.heap[2].is_none() {
+                    guy.dna.heap[2] = get_val();
+                    guy.update_fitness(&self.points);
+                } },
+            Some(Node::Sine) | Some(Node::Cosine) => {
+                if guy.dna.heap[1].is_none() && guy.dna.heap[2].is_none() {
+                    guy.dna.heap[1] = get_val();
+                    guy.update_fitness(&self.points);
+                } },
+            _ => { // Includes Variable and Number(_)
+                panic!("Bad individual:\n{}\n", guy.dna); }
+        }
+    }
+
     pub fn generate_population(&mut self, mut individuals: Vec<Individual>) -> Vec<Individual> {
         assert_eq!(self.population_size % 2, 0,
                    "population_size:{} should be divisible by 2", self.population_size);
@@ -92,8 +107,11 @@ impl Simulation {
 
         for _ in 0..(self.population_size / 2 ) { // generate two individuals per iteration
             let (mom_index, dad_index) = select_parents(&mut cumulative_weights);
-            let mom: Individual = individuals[mom_index].clone();
+            let mut mom: Individual = individuals[mom_index].clone();
             let dad: &mut Individual = &mut individuals[dad_index];
+            // Can't cross over when depth == 1
+            self.check_individual(&mut mom);
+            self.check_individual(dad);
             let (mut daughter, mut son) = self.generate_children(mom, dad);
             self.might_mutate_child(&mut daughter);
             self.might_mutate_child(&mut son);
@@ -118,6 +136,7 @@ impl Simulation {
         let mut population = random_population(self.population_size, &self.points);
         let mut champion = find_fittest(&population);
         for i in (0..self.iterations).progress() {
+            self.update_evaluations(&population);
             population = self.generate_population(population);
             let challenger = find_fittest(&population);
             if (i + 1) % skip == 0 {
