@@ -2,6 +2,10 @@
 - A Rust implementation of a genetic program to perform symbolic regression
 - See [Mithi](https://github.com/mithi) Sevilla's [Medium article](https://medium.com/@mithi/genetic-algorithms-in-rust-for-autonomous-agents-an-introduction-ac182de32aee) for a detailed discussion of the [repo](https://github.com/mithi/rusty-genes) from which this was initially forked, addressing the Travelling Salesman Problem
 
+Given the limited span of time I had to work on this project, the final result is lacking slightly. However, the program is complete enough to converge on a correct solution for certain datasets. Suggestions and contributions are welcome.
+
+Improvements are needed in the crossover and mutations methods. Currently the amount of redundant checks with crossover is so high that the order-of-magnitudes increase in speed from disabling it makes the so-called "hill climber" the more performant approach!
+
 # Usage
 ```bash
 $ cargo run ./data/specs/specs0.csv ./data/datasets/set0.csv > ./output0.csv
