@@ -15,9 +15,9 @@ def shrink(data, cols):
     return shaped.sum(axis = 1)
 
 # Champion & Challenger - Gold, All Approaches
-for pattern, label, errorevery in [("output_g_e?.csv", "Evolutionary Algorithm", 1000),
-                                   ("output_g_r?.csv", "Hill Climber", 1000),
-                                   ("output_g_g?.csv", "Random Search", 1000)]:
+for pattern, label in [("output_g_e?.csv", "Evolutionary Algorithm"),
+                       ("output_g_r?.csv", "Hill Climber"),
+                       ("output_g_g?.csv", "Random Search")]:
     data = {}
     for csv_path in data_dir.glob(pattern):
         with open(str(csv_path)) as f:
@@ -27,30 +27,28 @@ for pattern, label, errorevery in [("output_g_e?.csv", "Evolutionary Algorithm",
                     break
                 tag = int(line[1])
                 if tag not in data:
-                    data[tag] = [[float(line[2]), float(line[3])]]
-                    continue
+                    data[tag] = []
                 data[tag] += [[float(line[2]), float(line[3])]]
-
-    x = shrink(np.array([*data.keys()]), 100)
+    x = np.array([*data.keys()])
     ys = np.array([*data.values()])[:, :, 0] # 0 is running best, 1 is challenger from each epoch
-    print(f"{label} {ys.shape}")
+    ys = [y for (_, y) in sorted(zip(x, ys), key = lambda pair: pair[0])]
+    x = shrink(np.sort(x), 100)
     y = shrink(np.mean(ys, axis = 1), 100)
-    errs = shrink(np.std(ys, axis = 1), 100)
-    plt.errorbar(x, y, yerr = errs, errorevery = errorevery, label = label)
-
+    plt.plot(x, y, label = label)
+    #errs = shrink(np.std(ys, axis = 1), 100)
+    #plt.errorbar(x, y, yerr = errs, errorevery = 10, label = label)
 plt.suptitle("Learning Curves, Gold")
 plt.legend(loc = "lower right")
 plt.xlabel("Evaluations")
 plt.ylabel("Fitness")
 plt.yscale("log")
 plt.xscale("log")
-plt.savefig(base / "graph_g.png",
-            dpi = 650, bbox_inches = "tight")
+plt.savefig(base / "graph_g.png", dpi = 650, bbox_inches = "tight")
 plt.close()
 
 # Champion & Challenger - Bronze, All Approaches
-for pattern, label, errorevery in [("output_b_e?.csv", "Evolutionary Algorithm", 1000),
-                                   ("output_b_r?.csv", "Hill Climber", 1000)]:
+for pattern, label in [("output_b_e?.csv", "Evolutionary Algorithm"),
+                       ("output_b_r?.csv", "Hill Climber")]:
     data = {}
     for csv_path in data_dir.glob(pattern):
         with open(str(csv_path)) as f:
@@ -63,21 +61,19 @@ for pattern, label, errorevery in [("output_b_e?.csv", "Evolutionary Algorithm",
                     data[tag] = [[float(line[2]), float(line[3])]]
                     continue
                 data[tag] += [[float(line[2]), float(line[3])]]
-
-    x = shrink(np.array([*data.keys()]), 100)
+    x = np.array([*data.keys()])
     ys = np.array([*data.values()])[:, :, 0] # 0 is running best, 1 is challenger from each epoch
+    ys = [y for (_, y) in sorted(zip(x, ys), key = lambda pair: pair[0])]
+    x = shrink(np.sort(x), 100)
     y = shrink(np.mean(ys, axis = 1), 100)
-    errs = shrink(np.std(ys, axis = 1), 100)
-    plt.errorbar(x, y, yerr = errs, errorevery = errorevery, label = label)
-
+    plt.plot(x, y, label = label)
 plt.suptitle("Learning Curves, Bronze")
 plt.legend(loc = "lower right")
 plt.xlabel("Evaluations")
 plt.ylabel("Fitness")
 plt.yscale("log")
 plt.xscale("log")
-plt.savefig(base / "graph_b.png",
-            dpi = 650, bbox_inches = "tight")
+plt.savefig(base / "graph_b.png", dpi = 650, bbox_inches = "tight")
 plt.close()
 
 # Champion & Challenger - Gold, Detailed View
@@ -94,18 +90,13 @@ for pattern, label in [("output_g_e?.csv", "Evolutionary Algorithm")]:
                     data[tag] = [[float(line[2]), float(line[3])]]
                     continue
                 data[tag] += [[float(line[2]), float(line[3])]]
-
-    x = shrink(np.array([*data.keys()]), 100)
-    y = shrink(np.array([*data.values()])[:, :, 0], 100) # 0 is running best, 1 is challenger from each epoch
-    plt.plot(x, y)
-    y = shrink(np.array([*data.values()])[:, :, 1], 100) # 0 is running best, 1 is challenger from each epoch
-    plt.plot(x, y)
-
-plt.suptitle("Evolutionary Algorithm")
+    x = np.array([*data.keys()])
+    plt.plot(x, np.array([*data.values()])[:, :, 0],
+             marker = "o", ms = 3, linestyle = "None")
+plt.suptitle("Evolutionary Algorithm Dot Plot, Gold")
 plt.xlabel("Evaluations")
 plt.ylabel("Fitness")
-plt.yscale("log")
+#plt.yscale("log")
 plt.xscale("log")
-plt.savefig(base / "graph_g_dot.png",
-            dpi = 650, bbox_inches = "tight")
+plt.savefig(base / "graph_g_dot.png", dpi = 650, bbox_inches = "tight")
 plt.close()
